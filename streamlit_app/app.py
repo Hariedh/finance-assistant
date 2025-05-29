@@ -3,14 +3,14 @@ import streamlit as st
 import sys
 import os
 import tempfile
-from audio_utils.audio_utils import generate_audio
+from audio_utils import generate_audio
 
-# Add parent directory and subdirectories to sys.path
+# Add parent directory and root to sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../orchestrator')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../data_ingestion')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../agents')))
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../audio_utils')))
+sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 
 from orchestrator import Orchestrator
 
