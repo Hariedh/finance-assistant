@@ -5,6 +5,7 @@ from agents.retriever_agent import RetrieverAgent
 from agents.analysis_agent import AnalysisAgent
 from agents.language_agent import LanguageAgent
 import logging
+import re
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -17,6 +18,30 @@ class Orchestrator:
         self.retriever_agent = RetrieverAgent()
         self.analysis_agent = AnalysisAgent()
         self.language_agent = LanguageAgent()
+
+    def extract_symbols(self, text: str) -> list:
+        """Extract and validate stock symbols from text."""
+        # Regex to match stock symbols: 2-5 uppercase letters, optionally followed by numbers and/or a dot with 1-2 letters
+        pattern = r'\b[A-Z]{2,5}(?:[0-9]+)?(?:\.[A-Z]{1,2})?\b'
+        potential_symbols = re.findall(pattern, text)
+        if not potential_symbols:
+            logger.info("No symbols found, using default symbol TSM")
+            return ["TSM"]
+
+        # Validate symbols
+        valid_symbols = []
+        for symbol in potential_symbols:
+            if self.api_agent.validate_symbol(symbol):
+                valid_symbols.append(symbol)
+            else:
+                logger.warning(f"Symbol {symbol} is invalid and will be skipped")
+
+        if not valid_symbols:
+            logger.info("No valid symbols found, using default symbol TSM")
+            return ["TSM"]
+
+        logger.info(f"Valid symbols extracted: {valid_symbols}")
+        return list(set(valid_symbols))
 
     def generate_prediction(self, market_data: dict, earnings_surprises: dict, symbols: list) -> str:
         """Generate a dynamic prediction using market data, earnings, and sector."""
@@ -48,7 +73,7 @@ class Orchestrator:
                 predictions.append(f"{symbol} ({sector}, {cap_category}) may see limited movement due to low trading volume")
             else:
                 predictions.append(f"{symbol} ({sector}, {cap_category}) is likely to remain stable with an earnings surprise of {earnings_surprise:.2f}%")
-        logger-Javadoc: f"Generated predictions: {predictions}"
+        logger.info(f"Generated predictions: {predictions}")
         return "; ".join(predictions) + "."
 
     def generate_strategy(self, exposure: float, context: str, market_data: dict, symbols: list) -> str:
@@ -113,7 +138,7 @@ class Orchestrator:
             if not symbols:
                 return "No symbols provided."
 
-            # Use provided symbols directly (temporary: skip validation due to API rate limit)
+            # Use provided symbols
             valid_symbols = symbols
             logger.info(f"Processing symbols: {valid_symbols}")
 
