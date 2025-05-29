@@ -26,29 +26,31 @@ class Orchestrator:
         return list(set(symbols)) if symbols else ["TSM"]
 
     def generate_prediction(self, market_data: dict, earnings_surprises: dict, symbols: list) -> str:
-        """Generate a dynamic prediction based on market data and earnings."""
+        """Generate a dynamic prediction using market data, earnings, and sector."""
         predictions = []
         for symbol in symbols:
             price = market_data.get(symbol, {}).get('price', 0)
             volume = market_data.get(symbol, {}).get('volume', 0)
+            sector = market_data.get(symbol, {}).get('sector', 'Unknown')
+            price_trend = market_data.get(symbol, {}).get('price_trend', 'unknown')
             earnings_surprise = earnings_surprises.get(symbol, 0)
             
-            # More nuanced prediction logic
-            if earnings_surprise > 5 and price > 50 and volume > 1000000:
-                predictions.append(f"{symbol} is likely to outperform due to a strong earnings surprise of {earnings_surprise:.2f}% and high trading volume")
-            elif earnings_surprise < -5 and price < 20:
-                predictions.append(f"{symbol} may face downward pressure due to a negative earnings surprise of {earnings_surprise:.2f}% and low price")
+            if earnings_surprise > 5 and price > 50 and volume > 1000000 and price_trend == "up":
+                predictions.append(f"{symbol} ({sector}) is likely to outperform due to a strong earnings surprise of {earnings_surprise:.2f}% and an upward price trend")
+            elif earnings_surprise < -5 and price_trend == "down":
+                predictions.append(f"{symbol} ({sector}) may face downward pressure due to a negative earnings surprise of {earnings_surprise:.2f}% and a declining price trend")
             elif price == 0 or earnings_surprise == 0:
-                predictions.append(f"{symbol} lacks sufficient data for a reliable prediction")
+                predictions.append(f"{symbol} ({sector}) lacks sufficient data for a reliable prediction")
             else:
-                predictions.append(f"{symbol} is expected to remain stable with an earnings surprise of {earnings_surprise:.2f}%")
+                predictions.append(f"{symbol} ({sector}) is expected to remain stable with an earnings surprise of {earnings_surprise:.2f}%")
         logger.info(f"Generated predictions: {predictions}")
         return "; ".join(predictions) + "."
 
     def generate_strategy(self, exposure: float, context: str, market_data: dict, symbols: list) -> str:
-        """Generate a dynamic business strategy based on exposure, context, and market data."""
+        """Generate a dynamic strategy using exposure, context, and market data."""
         strategies = []
         avg_price = sum(market_data.get(s, {}).get('price', 0) for s in symbols) / len(symbols) if symbols else 0
+        sectors = set(market_data.get(s, {}).get('sector', 'Unknown') for s in symbols)
 
         # Exposure-based strategy
         if exposure > 75:
@@ -57,6 +59,16 @@ class Orchestrator:
             strategies.append("Increase exposure if fundamentals support growth")
         else:
             strategies.append("Maintain current exposure levels")
+
+        # Sector-based strategy
+        if "Technology" in sectors:
+            strategies.append("Leverage growth in the technology sector")
+        if "Energy" in sectors:
+            strategies.append("Monitor energy sector volatility")
+        if "Financials" in sectors:
+            strategies.append("Assess interest rate impacts on financials")
+        if len(sectors) > 3:
+            strategies.append("Diversify across sectors to reduce sector-specific risk")
 
         # Price-based strategy
         if avg_price > 100:
