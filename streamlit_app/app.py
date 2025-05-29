@@ -1,7 +1,7 @@
 import logging
 import streamlit as st
 import sys
-import os.path
+import os
 import tempfile
 from gtts import gTTS
 
@@ -19,7 +19,6 @@ logger = logging.getLogger(__name__)
 def generate_audio(text: str, output_path: str) -> bool:
     """Generate audio from text using gTTS."""
     try:
-        # Convert bullet points to natural speech
         clean_text = text.replace('- **', '').replace('**:', ':').replace('\n', '. ')
         tts = gTTS(text=clean_text, lang='en', slow=False)
         tts.save(output_path)
@@ -47,7 +46,7 @@ if st.button("Submit"):
             response = orchestrator.process_query(query)
             # Display response as markdown
             st.success("Response received!")
-            st.markdown(response, unsafe_text=True)
+            st.markdown(response, unsafe_allow_html=True)
             # Generate and play audio
             with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as temp_audio:
                 if generate_audio(response, temp_audio.name):
