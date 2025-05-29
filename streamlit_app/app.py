@@ -17,8 +17,8 @@ logger = logging.getLogger(__name__)
 # Initialize orchestrator
 orchestrator = Orchestrator()
 
-st.title("Morning Market Brief")
-st.markdown("Ask about your Asia tech portfolio.")
+st.title("Finance Assistant")
+st.markdown("Insights on Market Dynamics and Growth Opportunities")
 
 # Text input
 query = st.text_input("Enter your query (e.g., What's our risk exposure in Asia tech stocks today?)")
