@@ -20,10 +20,30 @@ class Orchestrator:
         self.language_agent = LanguageAgent()
 
     def extract_symbols(self, query: str) -> list:
-        """Extract stock symbols from query using regex."""
-        pattern = r'\b[A-Z0-9]{1,5}(?:\.[A-Z]{1,2})?\b'
-        symbols = re.findall(pattern, query.upper())
-        return list(set(symbols)) if symbols else ["TSM"]
+        """Extract and validate stock symbols from query."""
+        # Stricter regex: 2-5 uppercase letters, optionally followed by numbers and/or a dot with 1-2 letters
+        pattern = r'\b[A-Z]{2,5}(?:[0-9]+)?(?:\.[A-Z]{1,2})?\b'
+        # Find potential symbols
+        potential_symbols = re.findall(pattern, query.upper())
+        if not potential_symbols:
+            logger.info("No symbols found in query, using default symbol TSM")
+            return ["TSM"]
+
+        # Validate symbols using api_agent
+        valid_symbols = []
+        for symbol in potential_symbols:
+            if self.api_agent.validate_symbol(symbol):
+                valid_symbols.append(symbol)
+            else:
+                logger.warning(f"Symbol {symbol} is invalid and will be skipped")
+
+        # If no valid symbols found, use default
+        if not valid_symbols:
+            logger.info("No valid symbols found, using default symbol TSM")
+            return ["TSM"]
+
+        logger.info(f"Valid symbols extracted: {valid_symbols}")
+        return list(set(valid_symbols))
 
     def generate_prediction(self, market_data: dict, earnings_surprises: dict, symbols: list) -> str:
         """Generate a dynamic prediction using market data, earnings, and sector."""
