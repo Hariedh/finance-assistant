@@ -30,30 +30,51 @@ class Orchestrator:
         predictions = []
         for symbol in symbols:
             price = market_data.get(symbol, {}).get('price', 0)
+            volume = market_data.get(symbol, {}).get('volume', 0)
             earnings_surprise = earnings_surprises.get(symbol, 0)
-            if earnings_surprise > 0 and price > 0:
-                predictions.append(f"{symbol} may outperform due to a positive earnings surprise of {earnings_surprise:.2f}%")
-            elif earnings_surprise < 0:
-                predictions.append(f"{symbol} may underperform due to a negative earnings surprise of {earnings_surprise:.2f}%")
+            
+            # More nuanced prediction logic
+            if earnings_surprise > 5 and price > 50 and volume > 1000000:
+                predictions.append(f"{symbol} is likely to outperform due to a strong earnings surprise of {earnings_surprise:.2f}% and high trading volume")
+            elif earnings_surprise < -5 and price < 20:
+                predictions.append(f"{symbol} may face downward pressure due to a negative earnings surprise of {earnings_surprise:.2f}% and low price")
+            elif price == 0 or earnings_surprise == 0:
+                predictions.append(f"{symbol} lacks sufficient data for a reliable prediction")
             else:
-                predictions.append(f"{symbol} performance is uncertain with no significant earnings surprise")
+                predictions.append(f"{symbol} is expected to remain stable with an earnings surprise of {earnings_surprise:.2f}%")
+        logger.info(f"Generated predictions: {predictions}")
         return "; ".join(predictions) + "."
 
-    def generate_strategy(self, exposure: float, context: str) -> str:
-        """Generate a dynamic business strategy based on exposure and market context."""
+    def generate_strategy(self, exposure: float, context: str, market_data: dict, symbols: list) -> str:
+        """Generate a dynamic business strategy based on exposure, context, and market data."""
         strategies = []
-        if exposure > 50:
-            strategies.append("Consider reducing exposure to mitigate risk")
+        avg_price = sum(market_data.get(s, {}).get('price', 0) for s in symbols) / len(symbols) if symbols else 0
+
+        # Exposure-based strategy
+        if exposure > 75:
+            strategies.append("Reduce exposure to diversify risk")
+        elif exposure < 25:
+            strategies.append("Increase exposure if fundamentals support growth")
         else:
-            strategies.append("Maintain or increase exposure if fundamentals remain strong")
-        
-        # Analyze context for keywords
+            strategies.append("Maintain current exposure levels")
+
+        # Price-based strategy
+        if avg_price > 100:
+            strategies.append("Monitor for potential overvaluation")
+        elif avg_price < 30:
+            strategies.append("Evaluate for undervaluation opportunities")
+
+        # Context-based strategy
         if "china" in context.lower() or "geopolitical" in context.lower():
-            strategies.append("monitor geopolitical risks")
+            strategies.append("Hedge against geopolitical uncertainties")
         if "supply chain" in context.lower():
-            strategies.append("assess supply chain vulnerabilities")
+            strategies.append("Strengthen supply chain resilience")
         if "ai" in context.lower() or "technology" in context.lower():
-            strategies.append("leverage technology sector growth opportunities")
+            strategies.append("Capitalize on technology sector momentum")
+        if not any(keyword in context.lower() for keyword in ["china", "geopolitical", "supply chain", "ai", "technology"]):
+            strategies.append("Monitor broader market trends")
+
+        logger.info(f"Generated strategies: {strategies}")
         return "; ".join(strategies) + "."
 
     def process_query(self, query: str) -> str:
@@ -90,7 +111,7 @@ class Orchestrator:
 
             # Generate dynamic prediction and strategy
             prediction = self.generate_prediction(market_data, earnings_surprises, symbols)
-            strategy = self.generate_strategy(exposure, context)
+            strategy = self.generate_strategy(exposure, context, market_data, symbols)
 
             # Build bullet-point response
             bullet_points = [
