@@ -22,10 +22,10 @@ def generate_audio(text: str, output_path: str) -> bool:
         clean_text = text.replace('- **', '').replace('**:', ':').replace('\n', '. ')
         tts = gTTS(text=clean_text, lang='en', slow=False)
         tts.save(output_path)
-        logger.info(f'Audio generated and saved to {output_path}')
+        logger.info(f"Audio generated and saved to {output_path}")
         return True
     except Exception as e:
-        logger.error(f'Error generating audio: {str(e)}')
+        logger.error(f"Error generating audio: {str(e)}")
         return False
 
 # Initialize orchestrator
@@ -46,7 +46,16 @@ if st.button("Submit"):
             # Combine symbols with query
             full_query = f"{query} for stocks: {symbols_input}"
             # Process query
-            response, market_data, earnings = orchestrator.process_query(full_query)
+            result = orchestrator.process_query(full_query)
+            logger.info(f"Result from process_query: {result}")
+            # Safely unpack the result
+            if isinstance(result, tuple) and len(result) == 3:
+                response, market_data, earnings = result
+            else:
+                logger.error(f"Unexpected return value from process_query: {result}")
+                response = "- **Error**: Unexpected response format from processing query."
+                market_data = {}
+                earnings = {}
             # Display response as markdown
             st.success("Response received!")
             st.markdown(response, unsafe_allow_html=True)
@@ -64,4 +73,4 @@ if st.button("Submit"):
                     st.warning("Failed to generate audio response.")
     except Exception as e:
         logger.error(f"Error in Streamlit app: {str(e)}")
-        st.error("An error occurred. Please try again.")
+        st.error(f"An error occurred: {str(e)}. Please try again.")
