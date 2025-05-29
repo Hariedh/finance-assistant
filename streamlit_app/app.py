@@ -46,10 +46,15 @@ if st.button("Submit"):
             # Combine symbols with query
             full_query = f"{query} for stocks: {symbols_input}"
             # Process query
-            response = orchestrator.process_query(full_query)
+            response, market_data, earnings = orchestrator.process_query(full_query)
             # Display response as markdown
             st.success("Response received!")
             st.markdown(response, unsafe_allow_html=True)
+            # Display raw data for debugging
+            st.subheader("Debug: Raw Market Data")
+            st.write(market_data)
+            st.subheader("Debug: Raw Earnings Data")
+            st.write(earnings)
             # Generate and play audio
             with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as temp_audio:
                 if generate_audio(response, temp_audio.name):
