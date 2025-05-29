@@ -33,16 +33,28 @@ class Orchestrator:
             volume = market_data.get(symbol, {}).get('volume', 0)
             sector = market_data.get(symbol, {}).get('sector', 'Unknown')
             price_trend = market_data.get(symbol, {}).get('price_trend', 'unknown')
+            market_cap = market_data.get(symbol, {}).get('market_cap', 0)
             earnings_surprise = earnings_surprises.get(symbol, 0)
-            
-            if earnings_surprise > 5 and price > 50 and volume > 1000000 and price_trend == "up":
-                predictions.append(f"{symbol} ({sector}) is likely to outperform due to a strong earnings surprise of {earnings_surprise:.2f}% and an upward price trend")
-            elif earnings_surprise < -5 and price_trend == "down":
-                predictions.append(f"{symbol} ({sector}) may face downward pressure due to a negative earnings surprise of {earnings_surprise:.2f}% and a declining price trend")
-            elif price == 0 or earnings_surprise == 0:
-                predictions.append(f"{symbol} ({sector}) lacks sufficient data for a reliable prediction")
+
+            # Categorize stock by market cap
+            if market_cap > 200e9:
+                cap_category = "large-cap"
+            elif market_cap > 10e9:
+                cap_category = "mid-cap"
             else:
-                predictions.append(f"{symbol} ({sector}) is expected to remain stable with an earnings surprise of {earnings_surprise:.2f}%")
+                cap_category = "small-cap"
+
+            # Dynamic prediction logic
+            if earnings_surprise > 5 and price > 50 and volume > 500000 and price_trend == "up":
+                predictions.append(f"{symbol} ({sector}, {cap_category}) is poised to outperform with a strong earnings surprise of {earnings_surprise:.2f}% and upward momentum")
+            elif earnings_surprise < -5 and price_trend == "down":
+                predictions.append(f"{symbol} ({sector}, {cap_category}) may underperform due to a negative earnings surprise of {earnings_surprise:.2f}% and downward momentum")
+            elif price == 0 or earnings_surprise == 0 or volume == 0:
+                predictions.append(f"{symbol} ({sector}, {cap_category}) lacks sufficient data for a reliable prediction")
+            elif volume < 100000:
+                predictions.append(f"{symbol} ({sector}, {cap_category}) may see limited movement due to low trading volume")
+            else:
+                predictions.append(f"{symbol} ({sector}, {cap_category}) is likely to remain stable with an earnings surprise of {earnings_surprise:.2f}%")
         logger.info(f"Generated predictions: {predictions}")
         return "; ".join(predictions) + "."
 
@@ -51,6 +63,9 @@ class Orchestrator:
         strategies = []
         avg_price = sum(market_data.get(s, {}).get('price', 0) for s in symbols) / len(symbols) if symbols else 0
         sectors = set(market_data.get(s, {}).get('sector', 'Unknown') for s in symbols)
+        trends = [market_data.get(s, {}).get('price_trend', 'unknown') for s in symbols]
+        upward_trends = trends.count("up")
+        downward_trends = trends.count("down")
 
         # Exposure-based strategy
         if exposure > 75:
@@ -60,21 +75,29 @@ class Orchestrator:
         else:
             strategies.append("Maintain current exposure levels")
 
+        # Trend-based strategy
+        if upward_trends > len(symbols) / 2:
+            strategies.append("Consider riding the upward momentum")
+        elif downward_trends > len(symbols) / 2:
+            strategies.append("Prepare for potential downside risks")
+
         # Sector-based strategy
         if "Technology" in sectors:
-            strategies.append("Leverage growth in the technology sector")
+            strategies.append("Leverage growth opportunities in technology")
         if "Energy" in sectors:
-            strategies.append("Monitor energy sector volatility")
+            strategies.append("Monitor energy sector volatility due to global factors")
         if "Financials" in sectors:
-            strategies.append("Assess interest rate impacts on financials")
+            strategies.append("Assess interest rate impacts on financial stocks")
         if len(sectors) > 3:
-            strategies.append("Diversify across sectors to reduce sector-specific risk")
+            strategies.append("Maintain sector diversification to mitigate risks")
+        elif len(sectors) == 1:
+            strategies.append("Diversify across sectors to reduce concentration risk")
 
         # Price-based strategy
         if avg_price > 100:
-            strategies.append("Monitor for potential overvaluation")
+            strategies.append("Watch for overvaluation risks")
         elif avg_price < 30:
-            strategies.append("Evaluate for undervaluation opportunities")
+            strategies.append("Explore undervaluation opportunities")
 
         # Context-based strategy
         if "china" in context.lower() or "geopolitical" in context.lower():
@@ -140,7 +163,7 @@ class Orchestrator:
                 f"- **Business Strategy**: {strategy}"
             ])
             response = "\n".join(bullet_points)
-            return response
+            return response, market_data, earnings
         except Exception as e:
             logger.error(f"Error processing query: {str(e)}")
-            return "- **Error**: An error occurred while processing your request. Please try again."
+            return "- **Error**: An error occurred while processing your request. Please try again.", {}, {}
