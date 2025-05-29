@@ -21,10 +21,40 @@ class Orchestrator:
 
     def extract_symbols(self, query: str) -> list:
         """Extract stock symbols from query using regex."""
-        # Match uppercase letters/numbers (e.g., TSM, AAPL, 005930.KS)
         pattern = r'\b[A-Z0-9]{1,5}(?:\.[A-Z]{1,2})?\b'
         symbols = re.findall(pattern, query.upper())
-        return list(set(symbols)) if symbols else ["TSM"]  # Default to TSM if none found
+        return list(set(symbols)) if symbols else ["TSM"]
+
+    def generate_prediction(self, market_data: dict, earnings_surprises: dict, symbols: list) -> str:
+        """Generate a dynamic prediction based on market data and earnings."""
+        predictions = []
+        for symbol in symbols:
+            price = market_data.get(symbol, {}).get('price', 0)
+            earnings_surprise = earnings_surprises.get(symbol, 0)
+            if earnings_surprise > 0 and price > 0:
+                predictions.append(f"{symbol} may outperform due to a positive earnings surprise of {earnings_surprise:.2f}%")
+            elif earnings_surprise < 0:
+                predictions.append(f"{symbol} may underperform due to a negative earnings surprise of {earnings_surprise:.2f}%")
+            else:
+                predictions.append(f"{symbol} performance is uncertain with no significant earnings surprise")
+        return "; ".join(predictions) + "."
+
+    def generate_strategy(self, exposure: float, context: str) -> str:
+        """Generate a dynamic business strategy based on exposure and market context."""
+        strategies = []
+        if exposure > 50:
+            strategies.append("Consider reducing exposure to mitigate risk")
+        else:
+            strategies.append("Maintain or increase exposure if fundamentals remain strong")
+        
+        # Analyze context for keywords
+        if "china" in context.lower() or "geopolitical" in context.lower():
+            strategies.append("monitor geopolitical risks")
+        if "supply chain" in context.lower():
+            strategies.append("assess supply chain vulnerabilities")
+        if "ai" in context.lower() or "technology" in context.lower():
+            strategies.append("leverage technology sector growth opportunities")
+        return "; ".join(strategies) + "."
 
     def process_query(self, query: str) -> str:
         """Process a text query and return a bullet-point narrative response."""
@@ -54,9 +84,13 @@ class Orchestrator:
                 context = " ".join([doc.page_content for doc in retrieved_docs])
 
             # Analyze portfolio
-            portfolio_weights = {symbol: 1000000 for symbol in symbols}  # Equal weights
+            portfolio_weights = {symbol: 1000000 for symbol in symbols}
             exposure = self.analysis_agent.analyze_portfolio(market_data, portfolio_weights)
             earnings_surprises = {symbol: self.analysis_agent.analyze_earnings(earnings, symbol) for symbol in symbols}
+
+            # Generate dynamic prediction and strategy
+            prediction = self.generate_prediction(market_data, earnings_surprises, symbols)
+            strategy = self.generate_strategy(exposure, context)
 
             # Build bullet-point response
             bullet_points = [
@@ -69,8 +103,8 @@ class Orchestrator:
                 )
             bullet_points.extend([
                 f"- **Market Context**: {context[:200]}..." if len(context) > 200 else f"- **Market Context**: {context}.",
-                "- **Prediction**: Stocks with strong AI exposure likely to outperform.",
-                "- **Business Strategy**: Diversify geographic risks and monitor earnings."
+                f"- **Prediction**: {prediction}",
+                f"- **Business Strategy**: {strategy}"
             ])
             response = "\n".join(bullet_points)
             return response
