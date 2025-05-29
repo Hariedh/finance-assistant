@@ -26,12 +26,15 @@ class APIAgent:
                     try:
                         # Get daily data
                         data_df, meta_data = self.ts.get_daily(symbol, outputsize="compact")
-                        latest_data = data_df.iloc[-1]  # Most recent trading day
-                        data[symbol] = {
-                            "price": float(latest_data["4. close"]),
-                            "volume": float(latest_data["5. volume"]),
-                            "market_cap": 0  # Alpha Vantage free tier does not provide market cap directly
-                        }
+                        if not data_df.empty:
+                            latest_data = data_df.iloc[-1]  # Most recent trading day
+                            data[symbol] = {
+                                "price": float(latest_data["4. close"]),
+                                "volume": float(latest_data["5. volume"]),
+                                "market_cap": 0  # Alpha Vantage free tier does not provide market cap
+                            }
+                        else:
+                            data[symbol] = {"price": 0, "volume": 0, "market_cap": 0}
                         break
                     except Exception as e:
                         if "API call frequency" in str(e) or "call limit" in str(e):
@@ -55,12 +58,14 @@ class APIAgent:
             for attempt in range(3):
                 try:
                     earnings_data, _ = self.fd.get_earnings_quarterly(symbol)
-                    if earnings_data and len(earnings_data) > 0:
+                    # Check if earnings_data is a list and not empty
+                    if isinstance(earnings_data, list) and len(earnings_data) > 0:
                         latest_earnings = earnings_data[0]
                         return {
-                            "Reported EPS": float(latest_earnings.get("reportedEPS", 0)),
-                            "Estimated EPS": float(latest_earnings.get("estimatedEPS", 0)) or 0
+                            "Reported EPS": float(latest_earnings.get("reportedEPS", 0) or 0),
+                            "Estimated EPS": float(latest_earnings.get("estimatedEPS", 0) or 0)
                         }
+                    logger.warning(f"No earnings data returned for {symbol}")
                     return {"Reported EPS": 0, "Estimated EPS": 0}
                 except Exception as e:
                     if "API call frequency" in str(e) or "call limit" in str(e):
@@ -69,6 +74,7 @@ class APIAgent:
                     else:
                         logger.error(f"Error fetching earnings for {symbol}: {str(e)}")
                         return {"Reported EPS": 0, "Estimated EPS": 0}
+            logger.error(f"Failed to fetch earnings for {symbol} after retries")
             return {"Reported EPS": 0, "Estimated EPS": 0}
         except Exception as e:
             logger.error(f"Error fetching earnings for {symbol}: {str(e)}")
