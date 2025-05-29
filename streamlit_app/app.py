@@ -26,7 +26,7 @@ def generate_audio(text: str, output_path: str) -> bool:
         logger.info(f'Audio generated and saved to {output_path}')
         return True
     except Exception as e:
-        logger.error(f'Error generating audio: str(e)}')
+        logger.error(f'Error generating audio: {str(e)}')
         return False
 
 # Initialize orchestrator
