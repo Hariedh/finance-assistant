@@ -131,7 +131,7 @@ class Orchestrator:
         return "; ".join(strategies) + "."
 
     def process_query(self, query: str, symbols: list) -> str:
-        """Process a text query and return a bullet-point narrative response."""
+        """Process a text query and return a bullet-point narrative response. V2"""
         try:
             if not query:
                 return "No query provided."
