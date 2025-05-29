@@ -5,7 +5,6 @@ from agents.retriever_agent import RetrieverAgent
 from agents.analysis_agent import AnalysisAgent
 from agents.language_agent import LanguageAgent
 import logging
-import re
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -18,32 +17,6 @@ class Orchestrator:
         self.retriever_agent = RetrieverAgent()
         self.analysis_agent = AnalysisAgent()
         self.language_agent = LanguageAgent()
-
-    def extract_symbols(self, query: str) -> list:
-        """Extract and validate stock symbols from query."""
-        # Stricter regex: 2-5 uppercase letters, optionally followed by numbers and/or a dot with 1-2 letters
-        pattern = r'\b[A-Z]{2,5}(?:[0-9]+)?(?:\.[A-Z]{1,2})?\b'
-        # Find potential symbols
-        potential_symbols = re.findall(pattern, query.upper())
-        if not potential_symbols:
-            logger.info("No symbols found in query, using default symbol TSM")
-            return ["TSM"]
-
-        # Validate symbols using api_agent
-        valid_symbols = []
-        for symbol in potential_symbols:
-            if self.api_agent.validate_symbol(symbol):
-                valid_symbols.append(symbol)
-            else:
-                logger.warning(f"Symbol {symbol} is invalid and will be skipped")
-
-        # If no valid symbols found, use default
-        if not valid_symbols:
-            logger.info("No valid symbols found, using default symbol TSM")
-            return ["TSM"]
-
-        logger.info(f"Valid symbols extracted: {valid_symbols}")
-        return list(set(valid_symbols))
 
     def generate_prediction(self, market_data: dict, earnings_surprises: dict, symbols: list) -> str:
         """Generate a dynamic prediction using market data, earnings, and sector."""
@@ -75,7 +48,7 @@ class Orchestrator:
                 predictions.append(f"{symbol} ({sector}, {cap_category}) may see limited movement due to low trading volume")
             else:
                 predictions.append(f"{symbol} ({sector}, {cap_category}) is likely to remain stable with an earnings surprise of {earnings_surprise:.2f}%")
-        logger.info(f"Generated predictions: {predictions}")
+        logger-Javadoc: f"Generated predictions: {predictions}"
         return "; ".join(predictions) + "."
 
     def generate_strategy(self, exposure: float, context: str, market_data: dict, symbols: list) -> str:
@@ -132,22 +105,24 @@ class Orchestrator:
         logger.info(f"Generated strategies: {strategies}")
         return "; ".join(strategies) + "."
 
-    def process_query(self, query: str) -> str:
+    def process_query(self, query: str, symbols: list) -> str:
         """Process a text query and return a bullet-point narrative response."""
         try:
             if not query:
                 return "No query provided."
+            if not symbols:
+                return "No symbols provided."
 
-            # Extract symbols from query
-            symbols = self.extract_symbols(query)
-            logger.info(f"Processing symbols: {symbols}")
+            # Use provided symbols directly (temporary: skip validation due to API rate limit)
+            valid_symbols = symbols
+            logger.info(f"Processing symbols: {valid_symbols}")
 
             # Fetch market data
-            market_data = self.api_agent.get_market_data(symbols)
-            earnings = {symbol: self.api_agent.get_earnings(symbol) for symbol in symbols}
+            market_data = self.api_agent.get_market_data(valid_symbols)
+            earnings = {symbol: self.api_agent.get_earnings(symbol) for symbol in valid_symbols}
 
             # Scrape news for first valid symbol
-            news_url = f"https://finance.yahoo.com/quote/{symbols[0]}/news/"
+            news_url = f"https://finance.yahoo.com/quote/{valid_symbols[0]}/news/"
             news_text = self.scraping_agent.scrape_filings(news_url)
             documents = self.document_loader.load_and_split(news_text)
             self.retriever_agent.index_documents(documents)
@@ -160,19 +135,19 @@ class Orchestrator:
                 context = " ".join([doc.page_content for doc in retrieved_docs])
 
             # Analyze portfolio
-            portfolio_weights = {symbol: 1000000 for symbol in symbols}
+            portfolio_weights = {symbol: 1000000 for symbol in valid_symbols}
             exposure = self.analysis_agent.analyze_portfolio(market_data, portfolio_weights)
-            earnings_surprises = {symbol: self.analysis_agent.analyze_earnings(earnings, symbol) for symbol in symbols}
+            earnings_surprises = {symbol: self.analysis_agent.analyze_earnings(earnings, symbol) for symbol in valid_symbols}
 
             # Generate dynamic prediction and strategy
-            prediction = self.generate_prediction(market_data, earnings_surprises, symbols)
-            strategy = self.generate_strategy(exposure, context, market_data, symbols)
+            prediction = self.generate_prediction(market_data, earnings_surprises, valid_symbols)
+            strategy = self.generate_strategy(exposure, context, market_data, valid_symbols)
 
             # Build bullet-point response
             bullet_points = [
-                f"- **Portfolio Exposure**: {exposure:.2f}% of AUM ({', '.join([f'{s}: ${portfolio_weights[s]:,.0f}' for s in symbols])})."
+                f"- **Portfolio Exposure**: {exposure:.2f}% of AUM ({', '.join([f'{s}: ${portfolio_weights[s]:,.0f}' for s in valid_symbols])})."
             ]
-            for symbol in symbols:
+            for symbol in valid_symbols:
                 bullet_points.append(
                     f"- **{symbol}**: Price ${market_data.get(symbol, {}).get('price', 0):.2f}, "
                     f"Earnings Surprise {earnings_surprises.get(symbol, 0):.2f}%."
