@@ -32,24 +32,29 @@ def generate_audio(text: str, output_path: str) -> bool:
 orchestrator = Orchestrator()
 
 st.title("Morning Market Brief")
-st.markdown("Ask about your stock portfolio.")
+st.markdown("Ask about your stock portfolio (include symbols in your query, e.g., 'What's the risk for TSM, NVDA today?')")
 
-# Text inputs
-symbols_input = st.text_input("Enter stock symbols (comma-separated, e.g., TSM, AAPL, NVDA)", value="TSM")
-query = st.text_input("Enter your query (e.g., What's our risk exposure in stocks today?)")
+# Single text input
+query = st.text_input("Enter your query with stock symbols", value="What's the risk for TSM, NVDA today?")
 
 if st.button("Submit"):
     try:
-        if not query or not symbols_input:
-            st.error("Please provide both stock symbols and a query.")
+        if not query:
+            st.error("Please provide a query with stock symbols.")
         else:
-            # Parse symbols from input
-            symbols = [s.strip().upper() for s in symbols_input.split(",") if s.strip()]
+            # Extract symbols from query
+            symbols = orchestrator.extract_symbols(query)
+            # Clean query by removing symbols (for better context retrieval)
+            cleaned_query = query
+            for symbol in symbols:
+                cleaned_query = cleaned_query.replace(symbol, "").replace("  ", " ").strip()
+            if not cleaned_query:
+                cleaned_query = "Provide a market brief."
             if not symbols:
-                st.error("Please provide at least one valid stock symbol.")
+                st.error("Please include at least one valid stock symbol in your query.")
             else:
-                # Process query with symbols
-                response = orchestrator.process_query(query, symbols)
+                # Process query with extracted symbols
+                response = orchestrator.process_query(cleaned_query, symbols)
                 logger.info(f"Generated response: {response}")
                 # Display response as markdown
                 st.success("Response received!")
