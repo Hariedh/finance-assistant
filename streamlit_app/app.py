@@ -43,21 +43,24 @@ if st.button("Submit"):
         if not query or not symbols_input:
             st.error("Please provide both stock symbols and a query.")
         else:
-            # Combine symbols with query
-            full_query = f"{query} for stocks: {symbols_input}"
-            # Process query
-            response = orchestrator.process_query(full_query)
-            logger.info(f"Generated response: {response}")
-            # Display response as markdown
-            st.success("Response received!")
-            st.markdown(response, unsafe_allow_html=True)
-            # Generate and play audio
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as temp_audio:
-                if generate_audio(response, temp_audio.name):
-                    st.audio(temp_audio.name, format="audio/mp3", start_time=0)
-                    os.remove(temp_audio.name)  # Clean up
-                else:
-                    st.warning("Failed to generate audio response.")
+            # Parse symbols from input
+            symbols = [s.strip().upper() for s in symbols_input.split(",") if s.strip()]
+            if not symbols:
+                st.error("Please provide at least one valid stock symbol.")
+            else:
+                # Process query with symbols
+                response = orchestrator.process_query(query, symbols)
+                logger.info(f"Generated response: {response}")
+                # Display response as markdown
+                st.success("Response received!")
+                st.markdown(response, unsafe_allow_html=True)
+                # Generate and play audio
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as temp_audio:
+                    if generate_audio(response, temp_audio.name):
+                        st.audio(temp_audio.name, format="audio/mp3", start_time=0)
+                        os.remove(temp_audio.name)  # Clean up
+                    else:
+                        st.warning("Failed to generate audio response.")
     except Exception as e:
         logger.error(f"Error in Streamlit app: {str(e)}")
         st.error(f"An error occurred: {str(e)}. Please try again.")
