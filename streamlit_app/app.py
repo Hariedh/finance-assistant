@@ -46,24 +46,11 @@ if st.button("Submit"):
             # Combine symbols with query
             full_query = f"{query} for stocks: {symbols_input}"
             # Process query
-            result = orchestrator.process_query(full_query)
-            logger.info(f"Result from process_query: {result}")
-            # Safely unpack the result
-            if isinstance(result, tuple) and len(result) == 3:
-                response, market_data, earnings = result
-            else:
-                logger.error(f"Unexpected return value from process_query: {result}")
-                response = "- **Error**: Unexpected response format from processing query."
-                market_data = {}
-                earnings = {}
+            response = orchestrator.process_query(full_query)
+            logger.info(f"Generated response: {response}")
             # Display response as markdown
             st.success("Response received!")
             st.markdown(response, unsafe_allow_html=True)
-            # Display raw data for debugging
-            st.subheader("Debug: Raw Market Data")
-            st.write(market_data)
-            st.subheader("Debug: Raw Earnings Data")
-            st.write(earnings)
             # Generate and play audio
             with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as temp_audio:
                 if generate_audio(response, temp_audio.name):
