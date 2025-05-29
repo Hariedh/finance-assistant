@@ -25,7 +25,7 @@ class Orchestrator:
                 return "No query provided."
 
             # Fetch market data for Asia tech stocks
-            symbols = ["TSM", "SSNLF"]  # TSMC, Samsung (US OTC ticker)
+            symbols = ["TSM"]  # Limit to TSMC
             market_data = self.api_agent.get_market_data(symbols)
             earnings = {symbol: self.api_agent.get_earnings(symbol) for symbol in symbols}
 
@@ -42,18 +42,17 @@ class Orchestrator:
             context = " ".join([doc.page_content for doc in retrieved_docs])
 
             # Analyze portfolio
-            portfolio_weights = {"TSM": 1000000, "SSNLF": 800000}
+            portfolio_weights = {"TSM": 1000000}
             exposure = self.analysis_agent.analyze_portfolio(market_data, portfolio_weights)
             earnings_surprises = {symbol: self.analysis_agent.analyze_earnings(earnings, symbol) for symbol in symbols}
 
             # Build bullet-point response
             bullet_points = [
-                f"- **Portfolio Exposure**: {exposure:.2f}% of AUM (TSMC: ${portfolio_weights['TSM']:,.0f}, Samsung: ${portfolio_weights['SSNLF']:,.0f}).",
+                f"- **Portfolio Exposure**: {exposure:.2f}% of AUM (TSMC: ${portfolio_weights['TSM']:,.0f}).",
                 f"- **TSMC (TSM)**: Price ${market_data.get('TSM', {}).get('price', 0):.2f}, Earnings Surprise {earnings_surprises.get('TSM', 0):.2f}%.",
-                f"- **Samsung (SSNLF)**: Price ${market_data.get('SSNLF', {}).get('price', 0):.2f}, Earnings Surprise {earnings_surprises.get('SSNLF', 0):.2f}%.",
                 f"- **Market Context**: {context[:200]}..." if len(context) > 200 else f"- **Market Context**: {context}.",
-                "- **Prediction**: TSMC likely to outperform due to AI demand; Samsung faces headwinds from weaker AI exposure.",
-                "- **Business Strategy**: Diversify TSMC's geographic risk, monitor Samsung's HBM growth."
+                "- **Prediction**: TSMC likely to outperform due to AI demand.",
+                "- **Business Strategy**: Diversify TSMC's geographic risk."
             ]
             response = "\n".join(bullet_points)
             return response
