@@ -3,7 +3,7 @@ import streamlit as st
 import sys
 import os.path
 import tempfile
-import gTTS
+from gTTS import gTTS
 
 # Add root and subdirectories to sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
