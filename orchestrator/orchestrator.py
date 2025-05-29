@@ -130,13 +130,23 @@ class Orchestrator:
         logger.info(f"Generated strategies: {strategies}")
         return "; ".join(strategies) + "."
 
-    def process_query(self, query: str, symbols: list) -> str:
-        """Process a text query and return a bullet-point narrative response. V2"""
+    def process_query(self, query: str) -> str:
+        """Process a text query and return a bullet-point narrative response. Workaround V1"""
         try:
             if not query:
                 return "No query provided."
+
+            # Extract symbols from query
+            symbols = self.extract_symbols(query)
             if not symbols:
                 return "No symbols provided."
+
+            # Clean query by removing symbols (for better context retrieval)
+            cleaned_query = query
+            for symbol in symbols:
+                cleaned_query = cleaned_query.replace(symbol, "").replace("  ", " ").strip()
+            if not cleaned_query:
+                cleaned_query = "Provide a market brief."
 
             # Use provided symbols
             valid_symbols = symbols
@@ -153,7 +163,7 @@ class Orchestrator:
             self.retriever_agent.index_documents(documents)
 
             # Retrieve relevant context
-            retrieved_docs = self.retriever_agent.retrieve(query, k=5)
+            retrieved_docs = self.retriever_agent.retrieve(cleaned_query, k=5)
             if not retrieved_docs:
                 context = "No relevant news found."
             else:
