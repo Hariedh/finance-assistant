@@ -32,18 +32,21 @@ def generate_audio(text: str, output_path: str) -> bool:
 orchestrator = Orchestrator()
 
 st.title("Morning Market Brief")
-st.markdown("Ask about your Asia tech portfolio.")
+st.markdown("Ask about your stock portfolio.")
 
-# Text input
-query = st.text_input("Enter your query (e.g., What's our risk exposure in Asia tech stocks today?)")
+# Text inputs
+symbols_input = st.text_input("Enter stock symbols (comma-separated, e.g., TSM, AAPL, NVDA)", value="TSM")
+query = st.text_input("Enter your query (e.g., What's our risk exposure in stocks today?)")
 
 if st.button("Submit"):
     try:
-        if not query:
-            st.error("No query provided.")
+        if not query or not symbols_input:
+            st.error("Please provide both stock symbols and a query.")
         else:
+            # Combine symbols with query
+            full_query = f"{query} for stocks: {symbols_input}"
             # Process query
-            response = orchestrator.process_query(query)
+            response = orchestrator.process_query(full_query)
             # Display response as markdown
             st.success("Response received!")
             st.markdown(response, unsafe_allow_html=True)
