@@ -42,30 +42,19 @@ if st.button("Submit"):
         if not query:
             st.error("Please provide a query with stock symbols.")
         else:
-            # Extract symbols from query
-            symbols = orchestrator.extract_symbols(query)
-            # Clean query by removing symbols (for better context retrieval)
-            cleaned_query = query
-            for symbol in symbols:
-                cleaned_query = cleaned_query.replace(symbol, "").replace("  ", " ").strip()
-            if not cleaned_query:
-                cleaned_query = "Provide a market brief."
-            if not symbols:
-                st.error("Please include at least one valid stock symbol in your query.")
-            else:
-                # Process query with extracted symbols
-                response = orchestrator.process_query(cleaned_query, symbols)
-                logger.info(f"Generated response: {response}")
-                # Display response as markdown
-                st.success("Response received!")
-                st.markdown(response, unsafe_allow_html=True)
-                # Generate and play audio
-                with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as temp_audio:
-                    if generate_audio(response, temp_audio.name):
-                        st.audio(temp_audio.name, format="audio/mp3", start_time=0)
-                        os.remove(temp_audio.name)  # Clean up
-                    else:
-                        st.warning("Failed to generate audio response.")
+            # Process query directly (symbol extraction handled in orchestrator)
+            response = orchestrator.process_query(query)
+            logger.info(f"Generated response: {response}")
+            # Display response as markdown
+            st.success("Response received!")
+            st.markdown(response, unsafe_allow_html=True)
+            # Generate and play audio
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as temp_audio:
+                if generate_audio(response, temp_audio.name):
+                    st.audio(temp_audio.name, format="audio/mp3", start_time=0)
+                    os.remove(temp_audio.name)  # Clean up
+                else:
+                    st.warning("Failed to generate audio response.")
     except Exception as e:
         logger.error(f"Error in Streamlit app: {str(e)}")
         st.error(f"An error occurred: {str(e)}. Please try again.")
