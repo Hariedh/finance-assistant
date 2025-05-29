@@ -24,7 +24,9 @@ class APIAgent:
         try:
             ticker = yf.Ticker(symbol)
             info = ticker.info
-            return bool(info and "symbol" in info)
+            valid = bool(info and "symbol" in info)
+            logger.info(f"Symbol {symbol} validation: {'Valid' if valid else 'Invalid'}")
+            return valid
         except Exception as e:
             logger.warning(f"Symbol validation failed for {symbol}: {str(e)}")
             return False
@@ -44,14 +46,20 @@ class APIAgent:
                     ticker = yf.Ticker(symbol)
                     info = ticker.info
                     history = ticker.history(period="1mo")  # Last 30 days
-                    if not history.empty and "regularMarketPrice" in info:
+                    if not history.empty:
+                        price = float(info.get("regularMarketPrice", info.get("previousClose", info.get("bid", 0))))
+                        volume = float(info.get("averageDailyVolume10Day", info.get("volume", 0)))
+                        market_cap = float(info.get("marketCap", 0))
+                        sector = info.get("sector", info.get("industry", "Unknown"))
+                        price_trend = "up" if history["Close"].iloc[-1] > history["Close"].iloc[0] else "down"
                         data[symbol] = {
-                            "price": float(info.get("regularMarketPrice", info.get("previousClose", 0))),
-                            "volume": float(info.get("averageDailyVolume10Day", 0)),
-                            "market_cap": float(info.get("marketCap", 0)),
-                            "sector": info.get("sector", "Unknown"),
-                            "price_trend": "up" if history["Close"].iloc[-1] > history["Close"].iloc[0] else "down"
+                            "price": price if price > 0 else 0,
+                            "volume": volume if volume > 0 else 0,
+                            "market_cap": market_cap,
+                            "sector": sector,
+                            "price_trend": price_trend
                         }
+                        logger.info(f"yfinance data for {symbol}: {data[symbol]}")
                     else:
                         raise ValueError("yfinance returned incomplete data")
                 except Exception as e:
@@ -62,15 +70,20 @@ class APIAgent:
                             data_df, _ = self.ts.get_daily(symbol, outputsize="compact")
                             if not data_df.empty:
                                 latest_data = data_df.iloc[-1]
+                                price = float(latest_data["4. close"])
+                                volume = float(latest_data["5. volume"])
+                                price_trend = "up" if data_df["4. close"].iloc[-1] > data_df["4. close"].iloc[0] else "down"
                                 data[symbol] = {
-                                    "price": float(latest_data["4. close"]),
-                                    "volume": float(latest_data["5. volume"]),
+                                    "price": price if price > 0 else 0,
+                                    "volume": volume if volume > 0 else 0,
                                     "market_cap": 0,
                                     "sector": "Unknown",
-                                    "price_trend": "up" if data_df["4. close"].iloc[-1] > data_df["4. close"].iloc[0] else "down"
+                                    "price_trend": price_trend
                                 }
+                                logger.info(f"Alpha Vantage data for {symbol}: {data[symbol]}")
                             else:
                                 data[symbol] = {"price": 0, "volume": 0, "market_cap": 0, "sector": "Unknown", "price_trend": "unknown"}
+                                logger.warning(f"No market data returned for {symbol} by Alpha Vantage")
                             break
                         except Exception as e:
                             if "API call frequency" in str(e) or "call limit" in str(e):
@@ -100,7 +113,9 @@ class APIAgent:
                 latest_earnings = earnings.iloc[0]
                 reported_eps = float(latest_earnings.get("Reported EPS", 0) or 0)
                 estimated_eps = float(latest_earnings.get("EPS Estimate", 0) or 0)
-                return {"Reported EPS": reported_eps, "Estimated EPS": estimated_eps}
+                earnings_data = {"Reported EPS": reported_eps, "Estimated EPS": estimated_eps}
+                logger.info(f"yfinance earnings for {symbol}: {earnings_data}")
+                return earnings_data
             else:
                 raise ValueError("yfinance returned no earnings data")
 
@@ -112,10 +127,12 @@ class APIAgent:
                     earnings_data, _ = self.fd.get_earnings_quarterly(symbol)
                     if isinstance(earnings_data, list) and len(earnings_data) > 0:
                         latest_earnings = earnings_data[0]
-                        return {
+                        earnings_result = {
                             "Reported EPS": float(latest_earnings.get("reportedEPS", 0) or 0),
                             "Estimated EPS": float(latest_earnings.get("estimatedEPS", 0) or 0)
                         }
+                        logger.info(f"Alpha Vantage earnings for {symbol}: {earnings_result}")
+                        return earnings_result
                     logger.warning(f"No earnings data returned for {symbol}")
                     return {"Reported EPS": 0, "Estimated EPS": 0}
                 except Exception as e:
