@@ -116,7 +116,7 @@ class Orchestrator:
         """Process a text query and return a bullet-point narrative response."""
         try:
             if not query:
-                return "No query provided."
+                return "No query provided.", {}, {}
 
             # Extract symbols from query
             symbols = self.extract_symbols(query)
@@ -163,7 +163,7 @@ class Orchestrator:
                 f"- **Business Strategy**: {strategy}"
             ])
             response = "\n".join(bullet_points)
-            return response, market_data, earnings
-        except Exception as e:
-            logger.error(f"Error processing query: {str(e)}")
-            return "- **Error**: An error occurred while processing your request. Please try again.", {}, {}
+        return response, market_data, earnings
+    except Exception as e:
+        logger.error(f"Error processing query: {str(e)}")
+        return "- **Error**: An error occurred while processing your request. Please try again.", {}, {}
